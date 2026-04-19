@@ -171,7 +171,7 @@ internal static class TypeModelFactory
         if (!isFastClonerAvailable)
         {
             List<string> unclonableMembers = finalMembers
-                .Where(m => m.RequiresFastCloner)
+                .Where(m => m.RequiresFastCloner && m.MemberBehavior is not (MemberCloneBehavior.Reference or MemberCloneBehavior.Shallow))
                 .Select(m => m.Name)
                 .ToList();
             
@@ -191,7 +191,7 @@ internal static class TypeModelFactory
                         "Members requiring deep cloning:\n  - {1}\n\n" +
                         "Solutions:\n" +
                         "  1. Install the FastCloner NuGet package, OR\n" +
-                        "  2. Mark the member types with [FastClonerClonable] to enable source generation",
+                        "  2. Impl WaveKits.ICloneable.Clone",
                         "FastCloner",
                         severity,
                         isEnabledByDefault: true),

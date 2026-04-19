@@ -144,7 +144,7 @@ public class FastClonerIncrementalGenerator : IIncrementalGenerator
                             }
                         }
 
-                        CloneCodeGenerator generator = new CloneCodeGenerator(model, usages);
+                        CloneCodeGenerator generator = new CloneCodeGenerator(ctx,model, usages);
                         string generatedSource = generator.Generate();
                         
                         // Use FullyQualifiedName to avoid collisions when same class name exists in different namespaces
@@ -214,7 +214,7 @@ public class FastClonerIncrementalGenerator : IIncrementalGenerator
                 {
                     try
                     {
-                        ContextCodeGenerator generator = new ContextCodeGenerator(model);
+                        ContextCodeGenerator generator = new ContextCodeGenerator(ctx,model);
                         string source = generator.Generate();
                         
                         string safeName = model.FullyQualifiedName

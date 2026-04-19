@@ -299,6 +299,19 @@ internal static class TypeAnalyzer
             .Any(a => a.AttributeClass is not null && GetFullMetadataName(a.AttributeClass) == "FastCloner.SourceGenerator.Shared.FastClonerClonableAttribute");
     }
 
+    public static bool HasClonableShallowAttribute(ITypeSymbol type)
+    {
+        return type.GetAttributes()
+                   .Any(a => a.AttributeClass is not null && GetFullMetadataName(a.AttributeClass) == "FastCloner.SourceGenerator.Shared.FastClonerShallowAttribute");
+    }
+    
+    public static bool HasClonableInterface(ITypeSymbol type)
+    {
+        return type.AllInterfaces.Any(i =>
+            i.MetadataName == "ICloneable`1" &&
+            i.ContainingNamespace.ToDisplayString() == "WaveKits.Interface");
+    }
+    
     /// <summary>
     /// Gets a clean type name for use in generated method names.
     /// </summary>

@@ -212,6 +212,7 @@ internal static class MemberCollector
         INamedTypeSymbol? shallowAttribute = compilation.GetTypeByMetadataName("FastCloner.Code.FastClonerShallowAttribute");
         INamedTypeSymbol? referenceAttribute = compilation.GetTypeByMetadataName("FastCloner.Code.FastClonerReferenceAttribute");
         INamedTypeSymbol? nonSerializedAttribute = compilation.GetTypeByMetadataName("System.NonSerializedAttribute");
+        INamedTypeSymbol? fastClonerBehaviorAttribute = compilation.GetTypeByMetadataName("FastCloner.SourceGenerator.Shared.FastClonerBehaviorAttribute");
 
         // 1. Check for member-level attributes first (highest priority)
         foreach (AttributeData attr in member.GetAttributes())
@@ -232,6 +233,14 @@ internal static class MemberCollector
                 };
             }
 
+            if (fastClonerBehaviorAttribute != null && SymbolEqualityComparer.Default.Equals(attrClass, fastClonerBehaviorAttribute))
+            {
+                if (attr.ConstructorArguments.Length > 0 && attr.ConstructorArguments[0].Value is int behaviorInt)
+                {
+                    return (MemberCloneBehavior)behaviorInt;
+                }
+            }
+            
             if (shallowAttribute != null && SymbolEqualityComparer.Default.Equals(attrClass, shallowAttribute))
             {
                 return MemberCloneBehavior.Shallow;

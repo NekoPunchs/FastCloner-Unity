@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Microsoft.CodeAnalysis;
 
 namespace FastCloner.SourceGenerator;
 
@@ -10,9 +11,9 @@ internal sealed class CloneCodeGenerator
     private readonly CloneGeneratorContext _context;
     private readonly EquatableArray<GenericUsage> _usages;
 
-    public CloneCodeGenerator(TypeModel model, EquatableArray<GenericUsage> usages)
+    public CloneCodeGenerator(SourceProductionContext ctx,TypeModel model, EquatableArray<GenericUsage> usages)
     {
-        _context = new CloneGeneratorContext(model);
+        _context = new CloneGeneratorContext(ctx,model);
         _usages = usages;
     }
 

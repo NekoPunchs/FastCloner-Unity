@@ -2,217 +2,243 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 
-namespace FastCloner.SourceGenerator;
-
-internal static class ImplicitTypeAnalyzer
+namespace FastCloner.SourceGenerator
 {
-    public static bool TryAnalyze(
-        ITypeSymbol type,
-        Compilation compilation,
-        bool nullabilityEnabled,
-        TargetFramework targetFramework,
-        Dictionary<ITypeSymbol, TypeModel?> cache,
-        HashSet<ITypeSymbol> processingStack,
-        out TypeModel? implicitModel)
+    internal static class ImplicitTypeAnalyzer
     {
-        implicitModel = null;
-        
-        if (processingStack.Contains(type))
-            return true;
-            
-        if (cache.TryGetValue(type, out TypeModel? cached))
+        public static bool TryAnalyze(
+            ITypeSymbol type,
+            Compilation compilation,
+            bool nullabilityEnabled,
+            TargetFramework targetFramework,
+            Dictionary<ITypeSymbol, TypeModel?> cache,
+            HashSet<ITypeSymbol> processingStack,
+            out TypeModel? implicitModel)
         {
-            implicitModel = cached;
-            return cached != null;
-        }
-        
-        if (!TypeAnalyzer.IsImplicitCandidate(type))
-            return false;
-            
-        if (type is not INamedTypeSymbol namedType)
-            return false;
-            
-        processingStack.Add(type);
-        
-        List<MemberAnalysis> memberAnalyses = MemberCollector.GetMembers(namedType, compilation, nullabilityEnabled);
-        List<MemberModel> finalImplicitMembers = [];
-        List<TypeModel> childRelatedTypes = [];
-        Dictionary<string, MemberModel> implicitNestedMembers = new Dictionary<string, MemberModel>();
-        
-        bool success = true;
-        bool hasUnsafeReferenceMember = false;
+            implicitModel = null;
 
-        foreach (MemberAnalysis analysis in memberAnalyses)
-        {
-            MemberModel m = analysis.Model;
-            
-            if (!m.IsValueType && !TypeAnalyzer.IsSafeType(analysis.Type, compilation))
+            if (processingStack.Contains(type))
             {
-                hasUnsafeReferenceMember = true;
+                return true;
             }
-            
-            if (m.TypeKind is MemberTypeKind.Other or MemberTypeKind.Implicit)
+
+            if (cache.TryGetValue(type, out var cached))
             {
-                if (TryAnalyze(analysis.Type, compilation, nullabilityEnabled, targetFramework, cache, processingStack, out TypeModel? childModel))
-                {
-                    m = m with { TypeKind = MemberTypeKind.Implicit, RequiresFastCloner = false };
-                    if (childModel != null) childRelatedTypes.Add(childModel);
-                }
-                else
-                {
-                    success = false;
-                    break;
-                }
+                implicitModel = cached;
+                return cached != null;
             }
-            else if (m.RequiresFastCloner)
+
+            if (!TypeAnalyzer.IsImplicitCandidate(type))
             {
-                bool handled = false;
-                
-                bool TryHandleComponent(ITypeSymbol componentType, out MemberModel? componentMember)
+                return false;
+            }
+
+            if (type is not INamedTypeSymbol namedType)
+            {
+                return false;
+            }
+
+            processingStack.Add(type);
+
+            var memberAnalyses = MemberCollector.GetMembers(namedType, compilation, nullabilityEnabled);
+            List<MemberModel> finalImplicitMembers = [ ];
+            List<TypeModel> childRelatedTypes = [ ];
+            var implicitNestedMembers = new Dictionary<string, MemberModel>();
+
+            var success = true;
+            var hasUnsafeReferenceMember = false;
+
+            foreach (var analysis in memberAnalyses)
+            {
+                var m = analysis.Model;
+
+                if (!m.IsValueType && !TypeAnalyzer.IsSafeType(analysis.Type, compilation))
                 {
-                    componentMember = null;
-                    if (TryAnalyze(componentType, compilation, nullabilityEnabled, targetFramework, cache, processingStack, out TypeModel? compModel))
+                    hasUnsafeReferenceMember = true;
+                }
+
+                if (m.TypeKind is MemberTypeKind.Other or MemberTypeKind.Implicit)
+                {
+                    if (TryAnalyze(analysis.Type, compilation, nullabilityEnabled, targetFramework, cache, processingStack, out var childModel))
                     {
-                        if (compModel != null) childRelatedTypes.Add(compModel);
-                        
-                        string typeName = componentType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                        componentMember = new MemberModel(
-                            Name: "Implicit_" + componentType.Name, 
-                            TypeFullName: typeName,
-                            IsReadOnly: false,
-                            IsProperty: false,
-                            IsField: false,
-                            TypeKind: MemberTypeKind.Implicit,
-                            ElementTypeName: null, KeyTypeName: null, ValueTypeName: null,
-                            ElementIsSafe: false, ElementHasClonableAttr: false,
-                            KeyIsSafe: false, KeyIsClonable: false,
-                            ValueIsSafe: false, ValueIsClonable: false,
-                            RequiresFastCloner: false,
-                            CollectionKind: CollectionKind.None,
-                            ConcreteTypeFullName: null,
-                            IsValueType: componentType.IsValueType,
-                            IsInitOnly: false,
-                            IsRequired: false,
-                            ArrayRank: 0,
-                            IsNullable: false,
-                            HasGetter: true,
-                            HasSetter: true,
-                            SetterIsAccessible: true,
-                            MemberBehavior: MemberCloneBehavior.Clone
-                        );
-                        return true;
+                        m = m with { TypeKind = MemberTypeKind.Implicit, RequiresFastCloner = false };
+                        if (childModel != null)
+                        {
+                            childRelatedTypes.Add(childModel);
+                        }
                     }
-                    return false;
-                }
-
-                if (m.TypeKind is MemberTypeKind.Array or MemberTypeKind.Collection)
-                {
-                    ITypeSymbol? elemType = (m.TypeKind == MemberTypeKind.Array) 
-                        ? ((IArrayTypeSymbol)analysis.Type).ElementType 
-                        : TypeAnalyzer.GetCollectionElementType(analysis.Type, compilation);
-
-                    if (elemType != null && TryHandleComponent(elemType, out MemberModel? elemMember))
+                    else
                     {
-                        m = m with { RequiresFastCloner = false };
-                        if (elemMember != null) implicitNestedMembers[elemMember.Value.TypeFullName] = elemMember.Value;
-                        handled = true;
+                        success = false;
+                        break;
                     }
                 }
-                else if (m.TypeKind == MemberTypeKind.Dictionary)
+                else if (m.RequiresFastCloner)
                 {
-                    (ITypeSymbol KeyType, ITypeSymbol ValueType)? dictTypes = TypeAnalyzer.GetDictionaryTypes(analysis.Type, compilation);
-                    if (dictTypes.HasValue)
+                    var handled = false;
+
+                    bool TryHandleComponent(ITypeSymbol componentType, out MemberModel? componentMember)
                     {
-                        bool keyOk = m.KeyIsSafe || m.KeyIsClonable;
-                        bool valOk = m.ValueIsSafe || m.ValueIsClonable;
-                        
-                        if (!keyOk)
+                        componentMember = null;
+                        if (TryAnalyze(componentType, compilation, nullabilityEnabled, targetFramework, cache, processingStack, out var compModel))
                         {
-                            if (TryHandleComponent(dictTypes.Value.KeyType, out MemberModel? keyMember))
+                            if (compModel != null)
                             {
-                                if (keyMember != null) implicitNestedMembers[keyMember.Value.TypeFullName] = keyMember.Value;
-                                keyOk = true;
+                                childRelatedTypes.Add(compModel);
                             }
+
+                            var typeName = componentType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                            componentMember = new MemberModel("Implicit_" + componentType.Name,
+                                                              typeName,
+                                                              false,
+                                                              false,
+                                                              false,
+                                                              MemberTypeKind.Implicit,
+                                                              null,
+                                                              null,
+                                                              null,
+                                                              false,
+                                                              false,
+                                                              false,
+                                                              false,
+                                                              false,
+                                                              false,
+                                                              false,
+                                                              false,
+                                                              CollectionKind.None,
+                                                              null,
+                                                              componentType.IsValueType,
+                                                              false,
+                                                              false,
+                                                              0,
+                                                              false,
+                                                              true,
+                                                              true,
+                                                              true,
+                                                              MemberCloneBehavior.Clone);
+                            return true;
                         }
-                        
-                        if (!valOk)
-                        {
-                            if (TryHandleComponent(dictTypes.Value.ValueType, out MemberModel? valMember))
-                            {
-                                if (valMember != null) implicitNestedMembers[valMember.Value.TypeFullName] = valMember.Value;
-                                valOk = true;
-                            }
-                        }
-                        
-                        if (keyOk && valOk)
+
+                        return false;
+                    }
+
+                    if (m.TypeKind is MemberTypeKind.Array or MemberTypeKind.Collection)
+                    {
+                        var elemType = m.TypeKind == MemberTypeKind.Array ? ((IArrayTypeSymbol)analysis.Type).ElementType : TypeAnalyzer.GetCollectionElementType(analysis.Type, compilation);
+
+                        if (elemType != null && TryHandleComponent(elemType, out var elemMember))
                         {
                             m = m with { RequiresFastCloner = false };
+                            if (elemMember != null)
+                            {
+                                implicitNestedMembers[elemMember.Value.TypeFullName] = elemMember.Value;
+                            }
+
                             handled = true;
                         }
                     }
+                    else if (m.TypeKind == MemberTypeKind.Dictionary)
+                    {
+                        var dictTypes = TypeAnalyzer.GetDictionaryTypes(analysis.Type, compilation);
+                        if (dictTypes.HasValue)
+                        {
+                            var keyOk = m.KeyIsSafe || m.KeyIsClonable;
+                            var valOk = m.ValueIsSafe || m.ValueIsClonable;
+
+                            if (!keyOk)
+                            {
+                                if (TryHandleComponent(dictTypes.Value.KeyType, out var keyMember))
+                                {
+                                    if (keyMember != null)
+                                    {
+                                        implicitNestedMembers[keyMember.Value.TypeFullName] = keyMember.Value;
+                                    }
+
+                                    keyOk = true;
+                                }
+                            }
+
+                            if (!valOk)
+                            {
+                                if (TryHandleComponent(dictTypes.Value.ValueType, out var valMember))
+                                {
+                                    if (valMember != null)
+                                    {
+                                        implicitNestedMembers[valMember.Value.TypeFullName] = valMember.Value;
+                                    }
+
+                                    valOk = true;
+                                }
+                            }
+
+                            if (keyOk && valOk)
+                            {
+                                m = m with { RequiresFastCloner = false };
+                                handled = true;
+                            }
+                        }
+                    }
+
+                    if (!handled)
+                    {
+                        success = false;
+                        break;
+                    }
                 }
 
-                if (!handled)
-                {
-                    success = false; 
-                    break;
-                }
+                finalImplicitMembers.Add(m);
             }
-            
-            finalImplicitMembers.Add(m);
-        }
-        
-        processingStack.Remove(type);
-        
-        if (success)
-        {
-            Dictionary<string, TypeModel> relatedTypesMap = new Dictionary<string, TypeModel>();
-            foreach (TypeModel? child in childRelatedTypes)
+
+            processingStack.Remove(type);
+
+            if (success)
             {
-                relatedTypesMap[child.FullyQualifiedName] = child;
-                foreach (TypeModel? rel in child.RelatedTypes)
+                var relatedTypesMap = new Dictionary<string, TypeModel>();
+                foreach (var child in childRelatedTypes)
                 {
-                    relatedTypesMap[rel.FullyQualifiedName] = rel;
+                    relatedTypesMap[child.FullyQualifiedName] = child;
+                    foreach (var rel in child.RelatedTypes)
+                    {
+                        relatedTypesMap[rel.FullyQualifiedName] = rel;
+                    }
                 }
-            }
-            
-            (bool IsStruct, bool IsSealed, bool HasClonableBaseClass) flags = TypeAnalyzer.GetStructureFlags(namedType);
-            bool canHaveCircularRefs = hasUnsafeReferenceMember || flags.HasClonableBaseClass;
-            bool hasParameterlessConstructor = TypeAnalyzer.HasParameterlessConstructor(namedType);
-            bool trustNullability = namedType.GetAttributes()
-                .Any(a => a.AttributeClass?.ToDisplayString() == "FastCloner.SourceGenerator.Shared.FastClonerTrustNullabilityAttribute");
 
-            implicitModel = new TypeModel(
-                TypeAnalyzer.GetNamespace(namedType),
-                namedType.Name,
-                namedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                TypeAnalyzer.GetAccessibilityString(namedType.DeclaredAccessibility),
-                flags.IsStruct,
-                flags.IsSealed,
-                namedType.IsAbstract,
-                namedType.IsRecord,
-                flags.HasClonableBaseClass,
-                canHaveCircularRefs,
-                canHaveCircularRefs,
-                false,
-                new EquatableArray<MemberModel>(finalImplicitMembers.ToArray()),
-                new EquatableArray<string>(TypeAnalyzer.GetTypeParameters(namedType).ToArray()),
-                new EquatableArray<string>(TypeAnalyzer.GetTypeConstraints(namedType).ToArray()),
-                new EquatableArray<TypeModel>(relatedTypesMap.Values.ToArray()),
-                new EquatableArray<MemberModel>(implicitNestedMembers.Values.ToArray()),
-                EquatableArray<TypeModel>.Empty,
-                nullabilityEnabled,
-                trustNullability,
-                PreserveIdentity: null,
-                IsRefLikeType: false,
-                hasParameterlessConstructor,
-                CodeAnalysisAvailable: compilation.GetTypeByMetadataName("System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute") != null,
-                TargetFramework: targetFramework);
-                
-            cache[type] = implicitModel;
-            return true;
+                var flags = TypeAnalyzer.GetStructureFlags(namedType);
+                var canHaveCircularRefs = hasUnsafeReferenceMember || flags.HasClonableBaseClass;
+                var hasParameterlessConstructor = TypeAnalyzer.HasParameterlessConstructor(namedType);
+                var trustNullability = namedType.GetAttributes().Any(a => a.AttributeClass?.ToDisplayString() == "FastCloner.SourceGenerator.Shared.FastClonerTrustNullabilityAttribute");
+
+                implicitModel = new TypeModel(TypeAnalyzer.GetNamespace(namedType),
+                                              namedType.Name,
+                                              namedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                                              TypeAnalyzer.GetAccessibilityString(namedType.DeclaredAccessibility),
+                                              flags.IsStruct,
+                                              flags.IsSealed,
+                                              namedType.IsAbstract,
+                                              namedType.IsRecord,
+                                              flags.HasClonableBaseClass,
+                                              canHaveCircularRefs,
+                                              canHaveCircularRefs,
+                                              false,
+                                              new EquatableArray<MemberModel>(finalImplicitMembers.ToArray()),
+                                              new EquatableArray<string>(TypeAnalyzer.GetTypeParameters(namedType).ToArray()),
+                                              new EquatableArray<string>(TypeAnalyzer.GetTypeConstraints(namedType).ToArray()),
+                                              new EquatableArray<TypeModel>(relatedTypesMap.Values.ToArray()),
+                                              new EquatableArray<MemberModel>(implicitNestedMembers.Values.ToArray()),
+                                              EquatableArray<TypeModel>.Empty,
+                                              nullabilityEnabled,
+                                              trustNullability,
+                                              null,
+                                              false,
+                                              hasParameterlessConstructor,
+                                              compilation.GetTypeByMetadataName("System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute") != null,
+                                              targetFramework);
+
+                cache[type] = implicitModel;
+                return true;
+            }
+
+            return false;
         }
-        
-        return false;
     }
 }

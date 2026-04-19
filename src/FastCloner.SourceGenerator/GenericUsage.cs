@@ -10,5 +10,6 @@ internal readonly record struct GenericUsage(
     EquatableArray<MemberModel> NestedHelpers,
     EquatableArray<TypeModel> ImplicitTypes,
     bool IsSafe,
-    bool IsClonable
+    bool IsClonable,
+    bool IsClonableInterface
 ) : IEquatable<GenericUsage>;
