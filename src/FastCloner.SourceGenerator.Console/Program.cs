@@ -11,6 +11,12 @@ namespace WaveKits.Interface
     {
         T Clone(bool deepClone);
     }
+
+    public interface INote : ICloneable<INote>
+    {
+        
+    }
+    
 }
 
 namespace FastCloner.SourceGenerator.Console
@@ -20,16 +26,16 @@ namespace FastCloner.SourceGenerator.Console
     [FastClonerClonable, FastClonerSimulateNoRuntime]
     public partial class Person
     {
-        public Action<int> aaaaa;
-
-        public string Name { get; set; }
-
-        public int Age { get; set; }
-
-        [FastClonerBehavior(CloneBehavior.Ignore)]
-        public List<Person2> Hobbies { get; set; }
-        
-        public Person2 Person2 { get; set; }
+        // public Action<int> aaaaa;
+        //
+        // public string Name { get; set; }
+        //
+        // public int Age { get; set; }
+        //
+        // [FastClonerBehavior(CloneBehavior.Ignore)]
+        // public List<INote> Hobbies { get; set; }
+        // [FastClonerBehavior(CloneBehavior.Reference)]
+        public INote Person2 { get; set; }
     }
 
     public class Person2

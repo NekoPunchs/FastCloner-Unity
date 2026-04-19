@@ -17,7 +17,7 @@ namespace FastCloner.SourceGenerator
         MultiDimArray, // T[,], T[,,], etc. (multi-dimensional arrays)
         Object,        // System.Object
         Implicit,      // Implicitly clonable (struct/class with all clonable members)
-        Other          // Everything else - shallow copy fallback
+        Other,          // Everything else - shallow copy fallback
     }
 
     internal enum CollectionKind
@@ -271,10 +271,13 @@ namespace FastCloner.SourceGenerator
                 return (MemberTypeKind.Safe, null, null, null, false, false, false, false, false, false, false, false, CollectionKind.None, null, 0, true, true, null, null);
             }
 
+            var attr = TypeAnalyzer.HasClonableAttribute(type);
+            var ife = TypeAnalyzer.HasClonableInterface(type);
+            
             // Check if has clonable attribute
-            if (TypeAnalyzer.HasClonableAttribute(type))
+            if (attr || ife)
             {
-                return (MemberTypeKind.Clonable, null, null, null, false, false, false, false, false, false, false, false, CollectionKind.None, null, 0, true, true,
+                return (MemberTypeKind.Clonable, null, null, null, false, attr, ife, false, false, false, false, false, CollectionKind.None, null, 0, true, true,
                         TypeAnalyzer.ComputeExtensionClassFqn(type), null);
             }
 
