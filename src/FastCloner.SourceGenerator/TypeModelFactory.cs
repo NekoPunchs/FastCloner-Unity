@@ -237,6 +237,7 @@ internal static class TypeModelFactory
             TypeAnalyzer.GetNamespace(symbol),
             symbol.Name,
             symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+            TypeAnalyzer.GetAccessibilityString(symbol.DeclaredAccessibility),
             flags.IsStruct,
             flags.IsSealed,
             symbol.IsAbstract,

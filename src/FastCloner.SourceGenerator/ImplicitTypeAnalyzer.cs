@@ -186,6 +186,7 @@ internal static class ImplicitTypeAnalyzer
                 TypeAnalyzer.GetNamespace(namedType),
                 namedType.Name,
                 namedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                TypeAnalyzer.GetAccessibilityString(namedType.DeclaredAccessibility),
                 flags.IsStruct,
                 flags.IsSealed,
                 namedType.IsAbstract,

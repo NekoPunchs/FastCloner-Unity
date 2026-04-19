@@ -129,7 +129,7 @@ internal sealed class CloneCodeGenerator
         sb.AppendLine("    /// <summary>");
         sb.AppendLine($"    /// Extension methods for cloning {_context.Model.Name}.");
         sb.AppendLine("    /// </summary>");
-        sb.AppendLine($"    public static partial class {_context.Model.Name}FastDeepCloneExtensions");
+        sb.AppendLine($"    {_context.Model.Accessibility} partial class {_context.Model.Name}");
         sb.AppendLine("    {");
         
         WritePublicFastDeepCloneMethod(typeName, fullTypeName);
@@ -159,7 +159,7 @@ internal sealed class CloneCodeGenerator
         string notNullAttr = CloneGeneratorContext.NotNullIfNotNullAttr(_context.Model.CodeAnalysisAvailable && !isStruct);
         if (!string.IsNullOrEmpty(notNullAttr))
             sb.AppendLine($"        {notNullAttr}");
-        sb.AppendLine($"        public static {typeName}{returnTypeSuffix} FastDeepClone{typeParams}(this {typeName}{paramTypeSuffix} source){constraints}");
+        sb.AppendLine($"        private static {typeName}{returnTypeSuffix} FastDeepClone{typeParams}({typeName}{paramTypeSuffix} source){constraints}");
         sb.AppendLine("        {");
         
         bool hasInitOnlyWithCycles = _context.CanHaveCircularReferences && _context.Model.Members.Any(m => m.IsInitOnly);
@@ -218,7 +218,7 @@ internal sealed class CloneCodeGenerator
         string returnTypeSuffix = isStruct ? "" : "?";
         string paramTypeSuffix = (isStruct || trustNullability) ? "" : "?";
 
-        sb.AppendLine($"        internal static {typeName}{returnTypeSuffix} InternalFastDeepClone{typeParams}(this {typeName}{paramTypeSuffix} source, FcGeneratedCloneState? state){constraints}");
+        sb.AppendLine($"        private static {typeName}{returnTypeSuffix} InternalFastDeepClone{typeParams}({typeName}{paramTypeSuffix} source, FcGeneratedCloneState? state){constraints}");
         sb.AppendLine("        {");
         
         bool hasInitOnlyWithCycles = _context.CanHaveCircularReferences && _context.Model.Members.Any(m => m.IsInitOnly);

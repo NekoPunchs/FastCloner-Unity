@@ -11,6 +11,7 @@ internal sealed record TypeModel(
     string Namespace,
     string Name,
     string FullyQualifiedName,
+    string Accessibility,
     bool IsStruct,
     bool IsSealed,
     bool IsAbstract,

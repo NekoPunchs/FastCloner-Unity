@@ -692,4 +692,18 @@ internal static class TypeAnalyzer
     {
        return symbol is INamespaceSymbol { IsGlobalNamespace: true };
     }
+
+    public static string GetAccessibilityString(Accessibility accessibility)
+    {
+        return accessibility switch
+        {
+            Accessibility.Public => "public",
+            Accessibility.Internal => "internal",
+            Accessibility.Protected => "protected",
+            Accessibility.ProtectedAndInternal => "private protected",
+            Accessibility.ProtectedOrInternal => "protected internal",
+            Accessibility.Private => "private",
+            _ => "public"
+        };
+    }
 }
