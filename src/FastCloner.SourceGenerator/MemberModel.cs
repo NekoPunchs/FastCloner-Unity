@@ -275,12 +275,18 @@ namespace FastCloner.SourceGenerator
             var ife = TypeAnalyzer.HasClonableInterface(type);
             
             // Check if has clonable attribute
-            if (attr || ife)
+            if (attr)
             {
                 return (MemberTypeKind.Clonable, null, null, null, false, attr, ife, false, false, false, false, false, CollectionKind.None, null, 0, true, true,
                         TypeAnalyzer.ComputeExtensionClassFqn(type), null);
             }
 
+            if (ife)
+            {
+                return (MemberTypeKind.Implicit, null, null, null, false, attr, ife, false, false, false, false, false, CollectionKind.None, null, 0, true, true,
+                        TypeAnalyzer.ComputeExtensionClassFqn(type), null);
+            }
+            
             // Check if System.Object or Type Parameter (generic T)
             // For generics, we don't know at compile time if it's clonable.
             // We generate a smart fallback that handles safe types at runtime.

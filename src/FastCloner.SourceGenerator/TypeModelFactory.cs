@@ -243,6 +243,7 @@ internal static class TypeModelFactory
             symbol.IsAbstract,
             symbol.IsRecord,
             flags.HasClonableBaseClass,
+            false,
             canHaveCircularRefs,
             needsStateTracking,
             isFastClonerAvailable,

@@ -28,7 +28,9 @@ namespace FastCloner.SourceGenerator
                 return cached != null;
             }
 
-            if (!TypeAnalyzer.IsImplicitCandidate(type))
+            var hasInterface = TypeAnalyzer.HasClonableInterface(type);
+            
+            if (!TypeAnalyzer.IsImplicitCandidate(type) && !hasInterface)
             {
                 return false;
             }
@@ -217,6 +219,7 @@ namespace FastCloner.SourceGenerator
                                               namedType.IsAbstract,
                                               namedType.IsRecord,
                                               flags.HasClonableBaseClass,
+                                              hasInterface,
                                               canHaveCircularRefs,
                                               canHaveCircularRefs,
                                               false,

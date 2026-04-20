@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace FastCloner.SourceGenerator
 {
@@ -106,12 +107,6 @@ namespace FastCloner.SourceGenerator
 
                         case MemberTypeKind.Clonable:
                         {
-                            if (member.ElementHasClonableInterface)
-                            {
-                                sb.AppendLine($"            {resultVar}.{memberName} = {sourceVar}.{memberName}.Clone(true);");
-                                break;
-                            }
-
                             var extensionClassName = GetExtensionClassName(member);
                             sb.AppendLine($"            {resultVar}.{memberName} = {extensionClassName}.InternalFastDeepClone({sourceVar}.{memberName}, {stateVar}){nf};");
                             break;
@@ -138,6 +133,12 @@ namespace FastCloner.SourceGenerator
                             var isRegisteredType = helperMethodName == "Clone";
                             var shouldPassState = memberNeedsState || (isRegisteredType && stateVar != "null");
                             var actualStateVar = shouldPassState ? stateVar : "null";
+
+                            if (member.ElementHasClonableInterface)
+                            {
+                                sb.AppendLine($"            {resultVar}.{memberName} = {sourceVar}.{memberName}.Clone(true);");
+                                break;
+                            }
 
                             sb.AppendLine($"            {resultVar}.{memberName} = {GetHelperMethodCall(context, helperMethodName, $"{sourceVar}.{memberName}", shouldPassState, actualStateVar)}{nf};");
                         }
@@ -307,40 +308,47 @@ namespace FastCloner.SourceGenerator
             var typeName = implicitModel.FullyQualifiedName;
             var assignmentIndent = !implicitModel.IsStruct && !skipNullCheck ? "                    " : "                ";
 
-            if (!implicitModel.IsStruct && !skipNullCheck)
+            if (implicitModel.HasCloneInterface)
             {
-                sb.AppendLine($"                {resultVar}.{memberName} = new {typeName}");
-                sb.AppendLine("                {");
+                sb.AppendLine($"                {resultVar}.{memberName} = {safeName}.Clone(true);");
             }
             else
             {
-                sb.AppendLine($"            {resultVar}.{memberName} = new {typeName}");
-                sb.AppendLine("            {");
-            }
-
-            List<string> assignments = [ ];
-
-            foreach (var member in implicitModel.Members)
-            {
-                var assign = GetMemberAssignment(context, member, safeName, stateVar, assignmentIndent);
-                if (!string.IsNullOrEmpty(assign))
+                if (!implicitModel.IsStruct && !skipNullCheck)
                 {
-                    assignments.Add($"{assignmentIndent}{assign}");
+                    sb.AppendLine($"                {resultVar}.{memberName} = new {typeName}");
+                    sb.AppendLine("                {");
                 }
-            }
+                else
+                {
+                    sb.AppendLine($"            {resultVar}.{memberName} = new {typeName}");
+                    sb.AppendLine("            {");
+                }
 
-            if (assignments.Count > 0)
-            {
-                sb.AppendLine(string.Join(",\n", assignments));
-            }
+                List<string> assignments = [ ];
 
-            if (!implicitModel.IsStruct && !skipNullCheck)
-            {
-                sb.AppendLine("                };");
-            }
-            else
-            {
-                sb.AppendLine("            };");
+                foreach (var member in implicitModel.Members)
+                {
+                    var assign = GetMemberAssignment(context, member, safeName, stateVar, assignmentIndent);
+                    if (!string.IsNullOrEmpty(assign))
+                    {
+                        assignments.Add($"{assignmentIndent}{assign}");
+                    }
+                }
+
+                if (assignments.Count > 0)
+                {
+                    sb.AppendLine(string.Join(",\n", assignments));
+                }
+
+                if (!implicitModel.IsStruct && !skipNullCheck)
+                {
+                    sb.AppendLine("                };");
+                }
+                else
+                {
+                    sb.AppendLine("            };");
+                }
             }
 
             if (!implicitModel.IsStruct && !skipNullCheck)
@@ -358,7 +366,7 @@ namespace FastCloner.SourceGenerator
                                                           string indent = "            ",
                                                           bool isMemberNullable = true)
         {
-            var isSimpleIdentifier = System.Text.RegularExpressions.Regex.IsMatch(sourceVar, "^[a-zA-Z0-9_]+$");
+            var isSimpleIdentifier = Regex.IsMatch(sourceVar, "^[a-zA-Z0-9_]+$");
 
             var variableName = sourceVar;
             var wrapperPrefix = "";
@@ -368,8 +376,8 @@ namespace FastCloner.SourceGenerator
 
             if (!isSimpleIdentifier)
             {
-                var safeBase = System.Text.RegularExpressions.Regex.Replace(sourceVar, "[^a-zA-Z0-9_]", "_");
-                safeBase = System.Text.RegularExpressions.Regex.Replace(safeBase, "_+", "_").Trim('_');
+                var safeBase = Regex.Replace(sourceVar, "[^a-zA-Z0-9_]", "_");
+                safeBase = Regex.Replace(safeBase, "_+", "_").Trim('_');
                 var safeName = $"l_{safeBase}_{context.GetNextVariableId()}";
 
                 variableName = safeName;
@@ -448,12 +456,12 @@ namespace FastCloner.SourceGenerator
         }
 
         /// <summary>
-        /// Returns the precomputed extension class FQN for a clonable member type.
+        ///     Returns the precomputed extension class FQN for a clonable member type.
         /// </summary>
         private static string GetExtensionClassName(MemberModel member) => member.ClonableExtensionClass!;
 
         /// <summary>
-        /// Returns the precomputed extension class FQN for a clonable collection element type.
+        ///     Returns the precomputed extension class FQN for a clonable collection element type.
         /// </summary>
         public static string GetExtensionClassNameForType(MemberModel member) => member.ElementClonableExtensionClass!;
     }

@@ -17,6 +17,7 @@ internal sealed record TypeModel(
     bool IsAbstract,
     bool IsRecord,
     bool HasClonableBaseClass,
+    bool HasCloneInterface,
     bool CanHaveCircularReferences,
     bool NeedsStateTracking, // True if state needed for cycles OR identity preservation
     bool IsFastClonerAvailable,
