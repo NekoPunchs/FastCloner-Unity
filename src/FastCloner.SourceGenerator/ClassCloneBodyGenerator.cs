@@ -153,11 +153,12 @@ internal static class ClassCloneBodyGenerator
     
     internal static void WriteGetUninitializedObject(StringBuilder sb, string typeName)
     {
-        sb.AppendLine("#if NET5_0_OR_GREATER");
+        // sb.AppendLine("#if NET5_0_OR_GREATER");
+        // sb.AppendLine($"            var result = ({typeName})System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(typeof({typeName}));");
+        // sb.AppendLine("#else");
+        // sb.AppendLine($"            var result = ({typeName})System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof({typeName}));");
+        // sb.AppendLine("#endif");
         sb.AppendLine($"            var result = ({typeName})System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(typeof({typeName}));");
-        sb.AppendLine("#else");
-        sb.AppendLine($"            var result = ({typeName})System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof({typeName}));");
-        sb.AppendLine("#endif");
     }
     
     private static void WriteRecordCloneBody(CloneGeneratorContext ctx, string typeName, string sourceVarName = "source")
