@@ -82,6 +82,7 @@ namespace FastCloner.SourceGenerator
         {
             var memberName = member.Name;
             var nf = !member.IsNullable && !member.IsValueType ? "!" : "";
+            var nullable = member.IsNullable ? "?" : "";
             var sb = context.Source;
 
             switch (member)
@@ -128,7 +129,7 @@ namespace FastCloner.SourceGenerator
 
                             if (member.ElementHasClonableInterface)
                             {
-                                sb.AppendLine($"            {resultVar}.{memberName} = {sourceVar}.{memberName}.Clone(true);");
+                                sb.AppendLine($"            {resultVar}.{memberName} = {sourceVar}.{memberName}{nullable}.Clone(true);");
                                 break;
                             }
                             

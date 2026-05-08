@@ -274,16 +274,16 @@ namespace FastCloner.SourceGenerator
             var attr = TypeAnalyzer.HasClonableAttribute(type);
             var ife = TypeAnalyzer.HasClonableInterface(type);
             
+            if (ife)
+            {
+                return (MemberTypeKind.Implicit, null, null, null, false, attr, ife, false, false, false, false, false, CollectionKind.None, null, 0, true, true,
+                        TypeAnalyzer.ComputeExtensionClassFqn(type), null);
+            }
+            
             // Check if has clonable attribute
             if (attr)
             {
                 return (MemberTypeKind.Clonable, null, null, null, false, attr, ife, false, false, false, false, false, CollectionKind.None, null, 0, true, true,
-                        TypeAnalyzer.ComputeExtensionClassFqn(type), null);
-            }
-
-            if (ife)
-            {
-                return (MemberTypeKind.Implicit, null, null, null, false, attr, ife, false, false, false, false, false, CollectionKind.None, null, 0, true, true,
                         TypeAnalyzer.ComputeExtensionClassFqn(type), null);
             }
             

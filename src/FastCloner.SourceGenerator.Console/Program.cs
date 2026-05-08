@@ -15,21 +15,13 @@ namespace WaveKits.Interface
 
 namespace FastCloner.SourceGenerator.Console
 {
-    public abstract class Person : ICloneable<Person>
-    {
-        protected Person _parent;
-        // protected int _a;
-
-        public abstract Person Clone(bool deepClone);
-
-        public object Clone() => Clone(true);
-    }
-
     [FastClonerClonable, FastClonerSimulateNoRuntime]
-    public partial class PersonB : Person
+    public partial class PersonB : ICloneable<PersonB>
     {
-        protected int a;
-        public override Person Clone(bool deepClone) => FastDeepClone(this);
+        protected PersonB? a;
+        protected int? b;
+        public PersonB Clone(bool deepClone) => FastDeepClone(this);
+        public object Clone() => Clone(true);
     }
 
     //
