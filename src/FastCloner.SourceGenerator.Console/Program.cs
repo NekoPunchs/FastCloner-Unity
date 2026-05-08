@@ -4,42 +4,32 @@ using WaveKits.Interface;
 namespace WaveKits.Interface
 {
     /// <summary>
-    /// 克隆
+    ///     克隆
     /// </summary>
-    /// <typeparam name="T"></typeparam>
+    /// <typeparam name = "T"></typeparam>
     public interface ICloneable<out T> : ICloneable
     {
         T Clone(bool deepClone);
     }
-
-    public interface INote : ICloneable<INote>
-    {
-        
-    }
-    
 }
 
 namespace FastCloner.SourceGenerator.Console
 {
-    using System;
-
-    [FastClonerClonable, FastClonerSimulateNoRuntime]
-    public partial class Person
+    public abstract class Person : ICloneable<Person>
     {
-        // public Action<int> aaaaa;
-        //
-        // public string Name { get; set; }
-        //
-        // public int Age { get; set; }
-        //
-        // [FastClonerBehavior(CloneBehavior.Ignore)]
-        // public List<INote> Hobbies { get; set; }
-        // [FastClonerBehavior(CloneBehavior.Reference)]
-        public INote Person2 { get; set; }
+        protected Person _parent;
+        // protected int _a;
+
+        public abstract Person Clone(bool deepClone);
+
+        public object Clone() => Clone(true);
     }
 
-    public class Person2
+    [FastClonerClonable, FastClonerSimulateNoRuntime]
+    public partial class PersonB : Person
     {
+        protected int a;
+        public override Person Clone(bool deepClone) => FastDeepClone(this);
     }
 
     //
@@ -65,7 +55,7 @@ namespace FastCloner.SourceGenerator.Console
     {
         private static void Main(string[] args)
         {
-            var p = new Person();
+            // var p = new PersonB();
 
             // var myTest = new GenericClassWithConstraint<Dictionary<string, SampleUnannotatedClass>>();
             //

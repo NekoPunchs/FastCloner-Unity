@@ -126,6 +126,12 @@ namespace FastCloner.SourceGenerator
                                 break;
                             }
 
+                            if (member.ElementHasClonableInterface)
+                            {
+                                sb.AppendLine($"            {resultVar}.{memberName} = {sourceVar}.{memberName}.Clone(true);");
+                                break;
+                            }
+                            
                             var helperMethodName = context.GetOrCreateHelperMethodName(member);
                             context.TryGetImplicitTypeModel(member.TypeFullName, out implicitModel);
                             var modelDefault = implicitModel?.NeedsStateTracking ?? false;
@@ -133,12 +139,6 @@ namespace FastCloner.SourceGenerator
                             var isRegisteredType = helperMethodName == "Clone";
                             var shouldPassState = memberNeedsState || (isRegisteredType && stateVar != "null");
                             var actualStateVar = shouldPassState ? stateVar : "null";
-
-                            if (member.ElementHasClonableInterface)
-                            {
-                                sb.AppendLine($"            {resultVar}.{memberName} = {sourceVar}.{memberName}.Clone(true);");
-                                break;
-                            }
 
                             sb.AppendLine($"            {resultVar}.{memberName} = {GetHelperMethodCall(context, helperMethodName, $"{sourceVar}.{memberName}", shouldPassState, actualStateVar)}{nf};");
                         }
